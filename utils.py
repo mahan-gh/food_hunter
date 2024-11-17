@@ -28,10 +28,10 @@ class Foods(Enum):
 
 settings = {}
 
-url = "http://food.guilan.ac.ir"
+URL = "http://food.guilan.ac.ir"
 
 # سلف علوم پایه
-reserve_panel_url = "http://food.guilan.ac.ir/nurture/user/multi/reserve/showPanel.rose?selectedSelfDefId=4"
+RESERVE_PANEL_URL = "http://food.guilan.ac.ir/nurture/user/multi/reserve/showPanel.rose?selectedSelfDefId=4"
 
 
 async def get_meal_el(page):
@@ -44,7 +44,8 @@ async def get_meal_el(page):
 async def meal_is_checked(page):
     meal_el = await get_meal_el(page)
 
-    checkbox_el = await meal_el.evaluate_handle(f"element => element.querySelectorAll('input[type=checkbox]')[{settings.get('food').value}]")
+    checkbox_el = await meal_el.evaluate_handle(
+        f"element => element.querySelectorAll('input[type=checkbox]')[{settings.get('food').value}]")
     checkbox_el = checkbox_el.as_element()
 
     return await checkbox_el.is_checked(), checkbox_el
@@ -60,7 +61,8 @@ async def hunt_food(page):
 
         # sell icon <img src="/images/sell.png" ...>
         if food == Foods.EITHER:
-            buy_btn_el = await meal_el.evaluate_handle("element => element.querySelectorAll('img[src=\"/images/buy.png\"]'))")
+            buy_btn_el = await meal_el.evaluate_handle(
+                "element => element.querySelectorAll('img[src=\"/images/buy.png\"]'))")
         else:
             buy_btn_el = await meal_el.evaluate_handle(
                 f"element => Array.from(element.querySelectorAll('img[src=\"/images/buy.png\"]')).at({food.value})")
@@ -87,7 +89,7 @@ async def hunt_food(page):
 
 async def login(page):
     try:
-        await page.goto(url)
+        await page.goto(URL)
     except Exception as e:
         return False, f"cant not go to the website url: {e}"
 
@@ -106,7 +108,7 @@ async def login(page):
 
     if "res=5" in page.url:
         return False, "username or password is incorrect"
-    return True
+    return True, ""
 
 
 async def run(page: Page, **kwargs):
@@ -117,7 +119,7 @@ async def run(page: Page, **kwargs):
         return msg
 
     try:
-        await page.goto(reserve_panel_url)
+        await page.goto(RESERVE_PANEL_URL)
     except Exception as e:
         return f"cant not go to the reserve panel url: {e}"
 
@@ -128,7 +130,8 @@ async def run(page: Page, **kwargs):
         return "you already reserved the first meal"
 
     meal_el = await get_meal_el(page)
-    number_of_foods = await meal_el.evaluate_handle("element => element.querySelectorAll('tbody > tr').length")
+    number_of_foods = await meal_el.evaluate_handle(
+        "element => element.querySelectorAll('tbody > tr').length")
     number_of_foods = int(str(number_of_foods))
 
     if number_of_foods > 1:
@@ -162,7 +165,8 @@ async def run(page: Page, **kwargs):
 
     else:
         meal_el = await get_meal_el(page)
-        checkbox_el = await meal_el.evaluate_handle(f"element => element.querySelectorAll('input[type=checkbox]')[{settings.get('food').value}]")
+        checkbox_el = await meal_el.evaluate_handle(
+            f"element => element.querySelectorAll('input[type=checkbox]')[{settings.get('food').value}]")
 
         disabled = await checkbox_el.is_disabled()
         if disabled:
