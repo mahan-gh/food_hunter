@@ -1,0 +1,2 @@
+playwrite==1.44
+python-dotenv==0.21
