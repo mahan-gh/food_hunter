@@ -41,17 +41,19 @@ async def get_meal_el(page):
         f"element => element.parentElement.querySelectorAll('tr > td[width=\"12%\"]')[{settings.get('meal').value}]")
 
 
-async def meal_is_checked(page):
+async def meal_is_checked(page, food=None):
     meal_el = await get_meal_el(page)
 
+    value = food.value if food else settings.get('food').value
+
     checkbox_el = await meal_el.evaluate_handle(
-        f"element => element.querySelectorAll('input[type=checkbox]')[{settings.get('food').value}]")
+        f"element => element.querySelectorAll('input[type=checkbox]')[{value}]")
     checkbox_el = checkbox_el.as_element()
 
     return await checkbox_el.is_checked(), checkbox_el
 
 
-async def hunt_food(page):
+async def hunt_food(page: Page):
     while True:
         confirm_btn_el = await page.query_selector("#doReservBtn")
 
@@ -62,7 +64,7 @@ async def hunt_food(page):
         # sell icon <img src="/images/sell.png" ...>
         if food == Foods.EITHER:
             buy_btn_el = await meal_el.evaluate_handle(
-                "element => element.querySelectorAll('img[src=\"/images/buy.png\"]'))")
+                "element => element.querySelector('img[src=\"/images/buy.png\"]')")
         else:
             buy_btn_el = await meal_el.evaluate_handle(
                 f"element => Array.from(element.querySelectorAll('img[src=\"/images/buy.png\"]')).at({food.value})")
@@ -76,7 +78,11 @@ async def hunt_food(page):
             if checked:
                 return "successfully hunt a food"
             else:
-                return "cant reserve the food, probably the price is out of budget or someone hunt it first!"
+                # TODO if someone stole it we should retry
+                msg = await page.query_selector("#errorMessages")
+                if msg:
+                    msg = await msg.inner_text()
+                return f"cant reserve the food, probably the price is out of budget or someone hunt it first!: {msg}"
 
         else:
             time.sleep(random.uniform(1, 3))
@@ -125,7 +131,7 @@ async def run(page: Page, **kwargs):
 
     await page.wait_for_load_state()
 
-    first_food_checked, first_food_checked_el = await meal_is_checked(page)
+    first_food_checked, first_food_checked_el = await meal_is_checked(page, Foods.FIRST)
     if first_food_checked:
         return "you already reserved the first meal"
 
@@ -135,7 +141,7 @@ async def run(page: Page, **kwargs):
     number_of_foods = int(str(number_of_foods))
 
     if number_of_foods > 1:
-        second_food_checked, second_food_checked_el = await meal_is_checked(page)
+        second_food_checked, second_food_checked_el = await meal_is_checked(page, Foods.SECOND)
         if second_food_checked:
             return "you already reserved the second meal"
 
