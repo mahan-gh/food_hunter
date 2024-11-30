@@ -1,11 +1,11 @@
 import os
 import asyncio
 
-from utils import run, Days, Meals, Foods
-
 from dotenv import load_dotenv
 from playwright import async_api
 from playwright.async_api import Browser, Page
+
+from utils import run, Days, Meals, Foods
 
 load_dotenv()
 

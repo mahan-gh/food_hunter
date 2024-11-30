@@ -37,6 +37,9 @@ RESERVE_PANEL_URL = "http://food.guilan.ac.ir/nurture/user/multi/reserve/showPan
 async def get_meal_el(page):
     day_text_el: Locator = page.get_by_text(settings.get("day").value)
 
+    if await day_text_el.count() > 1:
+        day_text_el = day_text_el.nth(0)
+
     return await day_text_el.evaluate_handle(
         f"element => element.parentElement.querySelectorAll('tr > td[width=\"12%\"]')[{settings.get('meal').value}]")
 
@@ -56,7 +59,6 @@ async def meal_is_checked(page, food=None):
 async def hunt_food(page: Page):
     while True:
         confirm_btn_el = await page.query_selector("#doReservBtn")
-
         meal_el = await get_meal_el(page)
 
         food = settings.get('food')
@@ -70,34 +72,31 @@ async def hunt_food(page: Page):
                 f"element => Array.from(element.querySelectorAll('img[src=\"/images/buy.png\"]')).at({food.value})")
 
         buy_btn_el = buy_btn_el.as_element()
-
         if buy_btn_el:
             await buy_btn_el.click()
             await confirm_btn_el.click()
             checked, _ = await meal_is_checked(page)
             if checked:
                 return "successfully hunt a food"
-            else:
-                # TODO if someone stole it we should retry
-                msg = await page.query_selector("#errorMessages")
-                if msg:
-                    msg = await msg.inner_text()
-                return f"cant reserve the food, probably the price is out of budget or someone hunt it first!: {msg}"
+            # TODO if someone stole it we should retry
+            msg = await page.query_selector("#errorMessages")
+            if msg:
+                msg = await msg.inner_text()
+            return f"cant reserve the food, probably the price is out of budget or someone hunt it first!: {msg}"
 
-        else:
-            time.sleep(random.uniform(1, 3))
-            try:
-                await page.reload()
-                continue
-            except Exception as e:
-                return f"cant not go to the website url: {e}"
+        time.sleep(random.uniform(1, 3))
+        try:
+            await page.reload()
+            continue
+        except Exception as e:
+            return f"can not go to the website url: {e}"
 
 
 async def login(page):
     try:
         await page.goto(URL)
     except Exception as e:
-        return False, f"cant not go to the website url: {e}"
+        return False, f"can not go to the website url: {e}"
 
     cancel_redirect = await page.wait_for_selector("#btn-redirect-cancel", timeout=1000)
     if cancel_redirect:
@@ -149,7 +148,6 @@ async def run(page: Page, **kwargs):
 
     if settings.get('food') == Foods.EITHER:
         first_disabled = await first_food_checked_el.is_disabled()
-
         if first_disabled:
             return await hunt_food(page)
 
@@ -166,24 +164,21 @@ async def run(page: Page, **kwargs):
 
         if checked:
             return "reserved normally"
-        else:
-            return "cant reserve the food, probably the price is out of budget"
+        return "cant reserve the food, probably the price is out of budget"
 
-    else:
-        meal_el = await get_meal_el(page)
-        checkbox_el = await meal_el.evaluate_handle(
-            f"element => element.querySelectorAll('input[type=checkbox]')[{settings.get('food').value}]")
+    meal_el = await get_meal_el(page)
+    checkbox_el = await meal_el.evaluate_handle(
+        f"element => element.querySelectorAll('input[type=checkbox]')[{settings.get('food').value}]")
 
-        disabled = await checkbox_el.is_disabled()
-        if disabled:
-            return await hunt_food(page)
+    disabled = await checkbox_el.is_disabled()
+    if disabled:
+        return await hunt_food(page)
 
-        # we can reserve normally
-        await checkbox_el.click()
-        await confirm_btn_el.click()
-        checked, checkbox_el = await meal_is_checked(page)
+    # we can reserve normally
+    await checkbox_el.click()
+    await confirm_btn_el.click()
+    checked, checkbox_el = await meal_is_checked(page)
 
-        if checked:
-            return "reserved normally"
-        else:
-            return "cant reserve the food, probably the price is out of budget"
+    if checked:
+        return "reserved normally"
+    return "cant reserve the food, probably the price is out of budget"
